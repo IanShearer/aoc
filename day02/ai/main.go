@@ -14,8 +14,8 @@ type Range struct {
 	End   int64
 }
 
-// isInvalid checks if a product ID is invalid (made of a sequence repeated twice)
-func isInvalid(id int64) bool {
+// isInvalidPartOne checks if a product ID is invalid (made of a sequence repeated exactly twice)
+func isInvalidPartOne(id int64) bool {
 	s := strconv.FormatInt(id, 10)
 
 	// Must have even length to split in half
@@ -34,6 +34,43 @@ func isInvalid(id int64) bool {
 	secondHalf := s[mid:]
 
 	return firstHalf == secondHalf
+}
+
+// isInvalidPartTwo checks if a product ID is invalid (made of a sequence repeated at least twice)
+func isInvalidPartTwo(id int64) bool {
+	s := strconv.FormatInt(id, 10)
+
+	// No leading zeroes allowed
+	if s[0] == '0' {
+		return false
+	}
+
+	// Try all possible pattern lengths from 1 to len(s)/2
+	for patternLen := 1; patternLen <= len(s)/2; patternLen++ {
+		// Check if the string length is divisible by the pattern length
+		if len(s)%patternLen != 0 {
+			continue
+		}
+
+		// Extract the pattern
+		pattern := s[:patternLen]
+
+		// Check if the entire string consists of this pattern repeated
+		valid := true
+		for i := 0; i < len(s); i += patternLen {
+			if s[i:i+patternLen] != pattern {
+				valid = false
+				break
+			}
+		}
+
+		// If we found a valid repeating pattern, it's invalid
+		if valid {
+			return true
+		}
+	}
+
+	return false
 }
 
 // parseRanges parses the input line into a slice of ranges
@@ -69,13 +106,28 @@ func parseRanges(line string) ([]Range, error) {
 	return ranges, nil
 }
 
-// sumInvalidIDs finds all invalid IDs in the given ranges and returns their sum
-func sumInvalidIDs(ranges []Range) int64 {
+// sumInvalidIDsPartOne finds all invalid IDs (Part One rules) in the given ranges and returns their sum
+func sumInvalidIDsPartOne(ranges []Range) int64 {
 	var sum int64
 
 	for _, r := range ranges {
 		for id := r.Start; id <= r.End; id++ {
-			if isInvalid(id) {
+			if isInvalidPartOne(id) {
+				sum += id
+			}
+		}
+	}
+
+	return sum
+}
+
+// sumInvalidIDsPartTwo finds all invalid IDs (Part Two rules) in the given ranges and returns their sum
+func sumInvalidIDsPartTwo(ranges []Range) int64 {
+	var sum int64
+
+	for _, r := range ranges {
+		for id := r.Start; id <= r.End; id++ {
+			if isInvalidPartTwo(id) {
 				sum += id
 			}
 		}
@@ -105,6 +157,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	partOneAnswer := sumInvalidIDs(ranges)
+	partOneAnswer := sumInvalidIDsPartOne(ranges)
 	fmt.Printf("Part One: %d\n", partOneAnswer)
+
+	partTwoAnswer := sumInvalidIDsPartTwo(ranges)
+	fmt.Printf("Part Two: %d\n", partTwoAnswer)
 }
