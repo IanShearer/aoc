@@ -15,6 +15,9 @@ func main() {
 
 	partOne := countAccessibleRolls(grid)
 	fmt.Printf("Part One: %d\n", partOne)
+
+	partTwo := countRemovableRolls(grid)
+	fmt.Printf("Part Two: %d\n", partTwo)
 }
 
 func readGrid(filename string) ([]string, error) {
@@ -79,4 +82,72 @@ func countAccessibleRolls(grid []string) int {
 	}
 
 	return count
+}
+
+func countRemovableRolls(grid []string) int {
+	// Create a mutable copy of the grid
+	mutableGrid := make([][]byte, len(grid))
+	for i, row := range grid {
+		mutableGrid[i] = []byte(row)
+	}
+
+	totalRemoved := 0
+
+	for {
+		accessible := findAccessibleRolls(mutableGrid)
+		if len(accessible) == 0 {
+			break
+		}
+
+		// Remove all accessible rolls
+		for _, pos := range accessible {
+			mutableGrid[pos[0]][pos[1]] = '.'
+		}
+
+		totalRemoved += len(accessible)
+	}
+
+	return totalRemoved
+}
+
+func findAccessibleRolls(grid [][]byte) [][2]int {
+	if len(grid) == 0 {
+		return nil
+	}
+
+	var accessible [][2]int
+	rows := len(grid)
+	cols := len(grid[0])
+
+	directions := [][2]int{
+		{-1, -1}, {-1, 0}, {-1, 1},
+		{0, -1}, {0, 1},
+		{1, -1}, {1, 0}, {1, 1},
+	}
+
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
+			if grid[row][col] != '@' {
+				continue
+			}
+
+			adjacentRolls := 0
+			for _, dir := range directions {
+				newRow := row + dir[0]
+				newCol := col + dir[1]
+
+				if newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols {
+					if grid[newRow][newCol] == '@' {
+						adjacentRolls++
+					}
+				}
+			}
+
+			if adjacentRolls < 4 {
+				accessible = append(accessible, [2]int{row, col})
+			}
+		}
+	}
+
+	return accessible
 }
