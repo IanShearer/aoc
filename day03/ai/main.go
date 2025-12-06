@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/big"
 	"os"
 )
 
@@ -14,19 +15,29 @@ func main() {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	totalJoltage := 0
+	totalJoltagePartOne := 0
+	totalJoltagePartTwo := big.NewInt(0)
 
 	for scanner.Scan() {
 		line := scanner.Text()
+
+		// Part One: select 2 batteries
 		maxJoltage := findMaxJoltage(line)
-		totalJoltage += maxJoltage
+		totalJoltagePartOne += maxJoltage
+
+		// Part Two: select 12 batteries
+		maxJoltageStr := findMaxKDigits(line, 12)
+		maxJoltageBig := new(big.Int)
+		maxJoltageBig.SetString(maxJoltageStr, 10)
+		totalJoltagePartTwo.Add(totalJoltagePartTwo, maxJoltageBig)
 	}
 
 	if err := scanner.Err(); err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("Part One: %d\n", totalJoltage)
+	fmt.Printf("Part One: %d\n", totalJoltagePartOne)
+	fmt.Printf("Part Two: %s\n", totalJoltagePartTwo.String())
 }
 
 // findMaxJoltage finds the maximum joltage possible from a bank of batteries
@@ -52,4 +63,41 @@ func findMaxJoltage(bank string) int {
 	}
 
 	return maxJoltage
+}
+
+// findMaxKDigits finds the largest k-digit subsequence from a bank of batteries
+// using a greedy algorithm that maintains order
+func findMaxKDigits(bank string, k int) string {
+	n := len(bank)
+	if k > n {
+		return bank
+	}
+
+	result := make([]byte, 0, k)
+	start := 0
+
+	for len(result) < k {
+		remainingToSelect := k - len(result)
+		remainingPositions := n - start
+
+		// We can skip at most (remainingPositions - remainingToSelect) positions
+		// So we search in the first (remainingPositions - remainingToSelect + 1) positions
+		searchRange := remainingPositions - remainingToSelect + 1
+
+		// Find the maximum digit in the allowable search range
+		maxDigit := bank[start]
+		maxPos := start
+
+		for i := start; i < start+searchRange; i++ {
+			if bank[i] > maxDigit {
+				maxDigit = bank[i]
+				maxPos = i
+			}
+		}
+
+		result = append(result, maxDigit)
+		start = maxPos + 1
+	}
+
+	return string(result)
 }
