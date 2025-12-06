@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -42,6 +44,58 @@ func printUsage() {
 	fmt.Println("  aoc redact 4")
 }
 
+// CREATE COMMAND HELPERS
+func loadSessionCookie() (string, error) {
+	content, err := os.ReadFile(".env")
+	if err != nil {
+		return "", fmt.Errorf("failed to read .env file: %w", err)
+	}
+
+	// Parse the .env file to find session=VALUE
+	lines := strings.Split(string(content), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "session=") {
+			return strings.TrimPrefix(line, "session="), nil
+		}
+	}
+
+	return "", fmt.Errorf("session cookie not found in .env file")
+}
+
+func fetchInput(dayNum int, sessionCookie string) (string, error) {
+	url := fmt.Sprintf("https://adventofcode.com/2025/day/%d/input", dayNum)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Add session cookie
+	req.AddCookie(&http.Cookie{
+		Name:  "session",
+		Value: sessionCookie,
+	})
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch input: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to fetch input: status code %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return string(body), nil
+}
+
 // CREATE COMMAND
 func createDay() {
 	if len(os.Args) < 3 {
@@ -66,9 +120,22 @@ func createDay() {
 		os.Exit(1)
 	}
 
-	// Create input and answers files
+	// Load session cookie and fetch input
+	sessionCookie, err := loadSessionCookie()
+	if err != nil {
+		fmt.Printf("Error loading session cookie: %v\n", err)
+		os.Exit(1)
+	}
+
+	inputContent, err := fetchInput(dayNum, sessionCookie)
+	if err != nil {
+		fmt.Printf("Error fetching input: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Create input file with fetched content
 	inputFile := filepath.Join(dayDir, "input")
-	if err := os.WriteFile(inputFile, []byte(""), 0644); err != nil {
+	if err := os.WriteFile(inputFile, []byte(inputContent), 0644); err != nil {
 		fmt.Printf("Error creating input file: %v\n", err)
 		os.Exit(1)
 	}
